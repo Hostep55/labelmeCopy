@@ -4,14 +4,9 @@ import os.path as osp
 import re
 import webbrowser
 
-<<<<<<< Updated upstream
-from qtpy import QtCore
-from qtpy.QtCore import Qt
-=======
 from PyQt5.QtGui import QPixmap, QCursor
 from qtpy import QtCore
 from qtpy.QtCore import Qt, QSize
->>>>>>> Stashed changes
 from qtpy import QtGui
 from qtpy import QtWidgets
 
@@ -45,21 +40,6 @@ from labelme.widgets import ZoomWidget
 # - [low,maybe] Open images with drag & drop.
 # - [low,maybe] Preview images on file dialogs.
 # - Zoom is too "steppy".
-<<<<<<< Updated upstream
-
-
-class MainWindow(QtWidgets.QMainWindow):
-
-    FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
-
-    def __init__(
-        self,
-        config=None,
-        filename=None,
-        output=None,
-        output_file=None,
-        output_dir=None,
-=======
 from .widgets.canvas import CURSOR_DRAW
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -72,7 +52,6 @@ class MainWindow(QtWidgets.QMainWindow):
             output=None,
             output_file=None,
             output_dir=None,
->>>>>>> Stashed changes
     ):
         if output is not None:
             logger.warning(
@@ -298,11 +277,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr('Start drawing polygons'),
             enabled=False,
         )
-<<<<<<< Updated upstream
-=======
 
 
->>>>>>> Stashed changes
         createRectangleMode = action(
             self.tr('Create Rectangle'),
             lambda: self.toggleDrawMode(False, createMode='rectangle'),
@@ -389,25 +365,25 @@ class MainWindow(QtWidgets.QMainWindow):
                          icon='eye', tip=self.tr('Show all polygons'),
                          enabled=False)
 
-<<<<<<< Updated upstream
-=======
         arrow = action(self.tr('Arrow'), self.selectCursorArrow,
-                       'objects',
-                       self.tr('Definicion cuando mouse encima'),
-                       enabled=True)
+            #shortcuts['create_polygon'],  # TODO To change shortcut
+            'objects',  # TODO que es esto?
+            self.tr('Definicion cuando mouse encima'),
+            enabled=True)
 
         target = action(self.tr('Target'), self.selectCursorTarget1,
-                       'objects',
+                       #shortcuts['create_polygon'],  # TODO To change shortcut
+                       'objects',  # TODO que es esto?
                        self.tr('Definicion cuando mouse encima'),
                        enabled=True)
 
         target2 = action(self.tr('Target2'), self.selectCursorTarget2,
-                        'objects',
+                        #shortcuts['create_polygon'],  # TODO To change shortcut
+                        'objects',  # TODO que es esto?
                         self.tr('Definicion cuando mouse encima'),
                         enabled=True)
 
 
->>>>>>> Stashed changes
         help = action(self.tr('&Tutorial'), self.tutorial, icon='help',
                       tip=self.tr('Show tutorial page'))
 
@@ -574,10 +550,7 @@ class MainWindow(QtWidgets.QMainWindow):
             file=self.menu(self.tr('&File')),
             edit=self.menu(self.tr('&Edit')),
             view=self.menu(self.tr('&View')),
-<<<<<<< Updated upstream
-=======
             CursorType=self.menu(self.tr('&CursorType')),
->>>>>>> Stashed changes
             help=self.menu(self.tr('&Help')),
             recentFiles=QtWidgets.QMenu(self.tr('Open &Recent')),
             labelList=labelMenu,
@@ -602,15 +575,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 quit,
             ),
         )
-<<<<<<< Updated upstream
-        utils.addActions(self.menus.help, (help,))
-=======
 
         utils.addActions(self.menus.CursorType, (arrow, target, target2,))
 
         utils.addActions(self.menus.help, (help,))
 
->>>>>>> Stashed changes
         utils.addActions(
             self.menus.view,
             (
@@ -742,11 +711,8 @@ class MainWindow(QtWidgets.QMainWindow):
         # if self.firstStart:
         #    QWhatsThis.enterWhatsThisMode()
 
-<<<<<<< Updated upstream
-=======
         self.selectCursorArrow()
 
->>>>>>> Stashed changes
     def menu(self, title, actions=None):
         menu = self.menuBar().addMenu(title)
         if actions:
@@ -869,8 +835,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.loadShapes(self.canvas.shapes)
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
 
-<<<<<<< Updated upstream
-=======
     def selectCursorArrow(self):
         self.canvas.newcursor = os.getcwd() + "/icons/cursorArrow.png"
         self.canvas.positionX = 0
@@ -886,7 +850,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.positionX = -1
         self.canvas.positionY = -1
 
->>>>>>> Stashed changes
     def tutorial(self):
         url = 'https://github.com/wkentaro/labelme/tree/master/examples/tutorial'  # NOQA
         webbrowser.open(url)
@@ -905,10 +868,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.setEditing(edit)
         self.canvas.createMode = createMode
         if edit:
-<<<<<<< Updated upstream
-=======
             Shape.point_size = 8
->>>>>>> Stashed changes
             self.actions.createMode.setEnabled(True)
             self.actions.createRectangleMode.setEnabled(True)
             self.actions.createCircleMode.setEnabled(True)
@@ -916,10 +876,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions.createPointMode.setEnabled(True)
             self.actions.createLineStripMode.setEnabled(True)
         else:
-<<<<<<< Updated upstream
-=======
             Shape.point_size = 0
->>>>>>> Stashed changes
             if createMode == 'polygon':
                 self.actions.createMode.setEnabled(False)
                 self.actions.createRectangleMode.setEnabled(True)
@@ -1441,13 +1398,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return True
 
     def resizeEvent(self, event):
-<<<<<<< Updated upstream
-        if self.canvas and not self.image.isNull()\
-           and self.zoomMode != self.MANUAL_ZOOM:
-=======
         if self.canvas and not self.image.isNull() \
                 and self.zoomMode != self.MANUAL_ZOOM:
->>>>>>> Stashed changes
             self.adjustScale()
         super(MainWindow, self).resizeEvent(event)
 
