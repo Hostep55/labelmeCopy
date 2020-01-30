@@ -1,11 +1,24 @@
+<<<<<<< Updated upstream
+=======
+from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtGui import QPixmap, QCursor, QDrag
+>>>>>>> Stashed changes
 from qtpy import QtCore
 from qtpy import QtGui
 from qtpy import QtWidgets
 
+<<<<<<< Updated upstream
 from labelme import QT5
 from labelme.shape import Shape
 import labelme.utils
 
+=======
+from labelme import QT5, app
+from labelme.shape import Shape
+import labelme.utils
+
+import os
+>>>>>>> Stashed changes
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
@@ -20,6 +33,12 @@ CURSOR_GRAB = QtCore.Qt.OpenHandCursor
 
 class Canvas(QtWidgets.QWidget):
 
+<<<<<<< Updated upstream
+=======
+    positionX = 0
+    positionY = 0
+    newcursor = ""
+>>>>>>> Stashed changes
     zoomRequest = QtCore.Signal(int, QtCore.QPoint)
     scrollRequest = QtCore.Signal(int, int)
     newShape = QtCore.Signal()
@@ -80,6 +99,10 @@ class Canvas(QtWidgets.QWidget):
         # Set widget options.
         self.setMouseTracking(True)
         self.setFocusPolicy(QtCore.Qt.WheelFocus)
+<<<<<<< Updated upstream
+=======
+        self.previousPosition = None
+>>>>>>> Stashed changes
 
     def fillDrawing(self):
         return self._fill_drawing
@@ -168,6 +191,7 @@ class Canvas(QtWidgets.QWidget):
         self.prevMovePoint = pos
         self.restoreCursor()
 
+<<<<<<< Updated upstream
         # Polygon drawing.
         if self.drawing():
             self.line.shape_type = self.createMode
@@ -275,6 +299,155 @@ class Canvas(QtWidgets.QWidget):
             self.hVertex, self.hShape, self.hEdge = None, None, None
         self.edgeSelected.emit(self.hEdge is not None, self.hShape)
         self.vertexSelected.emit(self.hVertex is not None)
+=======
+        mods = ev.modifiers()
+
+        if (QtCore.Qt.ShiftModifier == int(mods)):
+            if(self.previousPosition):
+                currentPosition = ev.globalPos()
+
+                #print("pos: x: " + str(currentPosition.x()) + " y: " + str(currentPosition.y()))
+                #print("prev: x: " + str(self.previousPosition.x()) + " y: " + str(self.previousPosition.y()))
+
+                difX = currentPosition.x() - self.previousPosition.x()
+                difY = currentPosition.y() - self.previousPosition.y()
+                #print("dif: x: " + str(difX) + " dif y: " + str(difY))
+
+                # scroll
+                self.scrollRequest.emit(difX, QtCore.Qt.Horizontal)
+                self.scrollRequest.emit(difY, QtCore.Qt.Vertical)
+
+                #self.previousPosition = currentPosition
+            #else:
+            self.previousPosition = ev.globalPos()
+        else:
+            # Polygon drawing.
+            if self.drawing():
+                self.line.shape_type = self.createMode
+
+                #self.overrideCursor(CURSOR_DRAW)
+
+                # 1. Set the cursor map
+
+                self.cursor_pix = QPixmap(self.newcursor)
+
+                # 2. Scale textures
+                self.cursor_scaled_pix = self.cursor_pix  #Just in case the image needs to be scaled       .scaled(QSize(20, 20), Qt.KeepAspectRatio)
+
+                # 3. Set cursor style and cursor focus position
+                self.current_cursor = QCursor(self.cursor_scaled_pix, self.positionX, self.positionY,)
+
+                # 4. Set the cursor for the specified window
+                QtWidgets.QApplication.setOverrideCursor(self.current_cursor)
+
+                if not self.current:
+                    return
+
+                color = self.lineColor
+                if self.outOfPixmap(pos):
+                    # Don't allow the user to draw outside the pixmap.
+                    # Project the point to the pixmap's edges.
+                    pos = self.intersectionPoint(self.current[-1], pos)
+                elif len(self.current) > 1 and self.createMode == 'polygon' and\
+                        self.closeEnough(pos, self.current[0]):
+                    # Attract line to starting point and
+                    # colorise to alert the user.
+                    pos = self.current[0]
+                    color = self.current.line_color
+                    self.overrideCursor(CURSOR_POINT)
+                    self.current.highlightVertex(0, Shape.NEAR_VERTEX)
+                if self.createMode in ['polygon', 'linestrip']:
+                    self.line[0] = self.current[-1]
+                    self.line[1] = pos
+                elif self.createMode == 'rectangle':
+                    self.line.points = [self.current[0], pos]
+                    self.line.close()
+                elif self.createMode == 'circle':
+                    self.line.points = [self.current[0], pos]
+                    self.line.shape_type = "circle"
+                elif self.createMode == 'line':
+                    self.line.points = [self.current[0], pos]
+                    self.line.close()
+                elif self.createMode == 'point':
+                    self.line.points = [self.current[0]]
+                    self.line.close()
+                self.line.line_color = color
+                self.repaint()
+                self.current.highlightClear()
+                return
+
+            # Polygon copy moving.
+            if QtCore.Qt.RightButton & ev.buttons():
+                if self.selectedShapesCopy and self.prevPoint:
+                    self.overrideCursor(CURSOR_MOVE)
+                    self.boundedMoveShapes(self.selectedShapesCopy, pos)
+                    self.repaint()
+                elif self.selectedShapes:
+                    self.selectedShapesCopy = \
+                        [s.copy() for s in self.selectedShapes]
+                    self.repaint()
+                return
+
+            # Polygon/Vertex moving.
+            if QtCore.Qt.LeftButton & ev.buttons():
+                if self.selectedVertex():
+                    self.boundedMoveVertex(pos)
+                    self.repaint()
+                    self.movingShape = True
+                elif self.selectedShapes and self.prevPoint:
+                    self.overrideCursor(CURSOR_MOVE)
+                    self.boundedMoveShapes(self.selectedShapes, pos)
+                    self.repaint()
+                    self.movingShape = True
+                return
+
+            # Just hovering over the canvas, 2 possibilities:
+            # - Highlight shapes
+            # - Highlight vertex
+            # Update shape/vertex fill and tooltip value accordingly.
+            self.setToolTip(self.tr("Image"))
+            for shape in reversed([s for s in self.shapes if self.isVisible(s)]):
+                # Look for a nearby vertex to highlight. If that fails,
+                # check if we happen to be inside a shape.
+                index = shape.nearestVertex(pos, self.epsilon / self.scale)
+                index_edge = shape.nearestEdge(pos, self.epsilon / self.scale)
+                if index is not None:
+                    if self.selectedVertex():
+                        self.hShape.highlightClear()
+                    self.hVertex = index
+                    self.hShape = shape
+                    self.hEdge = index_edge
+                    shape.highlightVertex(index, shape.MOVE_VERTEX)
+                    self.overrideCursor(CURSOR_POINT)
+                    self.setToolTip(self.tr("Click & drag to move point"))
+                    self.setStatusTip(self.toolTip())
+                    self.update()
+                    break
+                elif shape.containsPoint(pos):
+                    if self.selectedVertex():
+                        self.hShape.highlightClear()
+                    self.hVertex = None
+                    self.hShape = shape
+                    self.hEdge = index_edge
+                    self.setToolTip(
+                        self.tr("Click & drag to move shape '%s'") % shape.label)
+                    self.setStatusTip(self.toolTip())
+                    self.overrideCursor(CURSOR_GRAB)
+                    self.update()
+                    break
+            else:  # Nothing found, clear highlights, reset state.
+                if self.hShape:
+                    self.hShape.highlightClear()
+                    self.update()
+                self.hVertex, self.hShape, self.hEdge = None, None, None
+            self.edgeSelected.emit(self.hEdge is not None, self.hShape)
+            self.vertexSelected.emit(self.hVertex is not None)
+
+    def keyReleaseEvent (self, keyEv):
+        if(keyEv.key() == Qt.Key_Shift  ):
+            #print("shift")
+            self.previousPosition = None
+>>>>>>> Stashed changes
 
     def addPointToEdge(self):
         if (self.hShape is None and
