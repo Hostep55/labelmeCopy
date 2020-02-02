@@ -365,24 +365,9 @@ class MainWindow(QtWidgets.QMainWindow):
                          icon='eye', tip=self.tr('Show all polygons'),
                          enabled=False)
 
-        arrow = action(self.tr('Arrow'), self.selectCursorArrow,
-            #shortcuts['create_polygon'],  # TODO To change shortcut
-            'objects',  # TODO que es esto?
-            self.tr('Definicion cuando mouse encima'),
-            enabled=True)
-
-        target = action(self.tr('Target'), self.selectCursorTarget1,
-                       #shortcuts['create_polygon'],  # TODO To change shortcut
-                       'objects',  # TODO que es esto?
-                       self.tr('Definicion cuando mouse encima'),
-                       enabled=True)
-
-        target2 = action(self.tr('Target2'), self.selectCursorTarget2,
-                        #shortcuts['create_polygon'],  # TODO To change shortcut
-                        'objects',  # TODO que es esto?
-                        self.tr('Definicion cuando mouse encima'),
-                        enabled=True)
-
+        arrow = action(self.tr('Arrow'), self.selectCursorArrow, enabled=True)
+        target = action(self.tr('Target'), self.selectCursorTarget1, enabled=True)
+        target2 = action(self.tr('Target2'), self.selectCursorTarget2, enabled=True)
 
         help = action(self.tr('&Tutorial'), self.tutorial, icon='help',
                       tip=self.tr('Show tutorial page'))
