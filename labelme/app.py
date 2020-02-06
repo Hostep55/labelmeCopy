@@ -4,9 +4,9 @@ import os.path as osp
 import re
 import webbrowser
 
-from PyQt5.QtGui import QPixmap, QCursor
+from PyQt5.QtGui import QIcon
 from qtpy import QtCore
-from qtpy.QtCore import Qt, QSize
+from qtpy.QtCore import Qt
 from qtpy import QtGui
 from qtpy import QtWidgets
 
@@ -30,7 +30,6 @@ from labelme.widgets import LabelQListWidget
 from labelme.widgets import ToolBar
 from labelme.widgets import ZoomWidget
 
-
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
 
@@ -42,8 +41,15 @@ from labelme.widgets import ZoomWidget
 # - Zoom is too "steppy".
 from .widgets.canvas import CURSOR_DRAW
 
+
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
+    COMMENTS_STATUS = [
+        '-- Select --',
+        'Incomplete',
+        'In Process',
+        'Complete'
+    ]
 
     def __init__(
             self,
@@ -91,10 +97,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flag_dock = QtWidgets.QDockWidget(self.tr('Flags'), self)
         self.flag_dock.setObjectName('Flags')
         self.flag_widget = QtWidgets.QListWidget()
+
         if config['flags']:
             self.loadFlags({k: False for k in config['flags']})
         self.flag_dock.setWidget(self.flag_widget)
         self.flag_widget.itemChanged.connect(self.setDirty)
+
+        self.textComments = QtWidgets.QTextEdit()
+        # self.textComments.setPlaceholderText(self.tr('Add Comments'))
+        self.textComments.textChanged.connect(self.setDirty)
+        self.comboBoxCommentsWidget = QtWidgets.QComboBox()
+
+        for op in self.COMMENTS_STATUS:
+            self.comboBoxCommentsWidget.addItem(QIcon(os.getcwd() + "/icons/" + op + ".png"), op)
+
+        self.comboBoxCommentsWidget.currentIndexChanged.connect(self.comboBoxCommentsCurrentIndexChanged)
+        fileListLayout = QtWidgets.QVBoxLayout()  # TODO esta seccion porq se dejo fileListLayout y porq no interfiere con el original q esta abajo?
+        fileListLayout.setContentsMargins(0, 0, 0, 0)
+        fileListLayout.setSpacing(0)
+        fileListLayout.addWidget(self.textComments)
+        fileListLayout.addWidget(self.comboBoxCommentsWidget)
+        self.comments_dock = QtWidgets.QDockWidget(self.tr(u'Comments'), self)
+        self.comments_dock.setObjectName(u'Comments')
+        comentsWidgetTMP = QtWidgets.QWidget()
+        comentsWidgetTMP.setLayout(fileListLayout)
+        self.comments_dock.setWidget(comentsWidgetTMP)
+        self.comments_dock.setDisabled(True)
 
         self.labelList.itemActivated.connect(self.labelSelectionChanged)
         self.labelList.itemSelectionChanged.connect(self.labelSelectionChanged)
@@ -166,7 +194,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ['flag_dock', 'label_dock', 'shape_dock', 'file_dock']:
+        for dock in ['flag_dock', 'label_dock', 'shape_dock', 'file_dock', 'comments_dock']:
             if self._config[dock]['closable']:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]['floatable']:
@@ -181,6 +209,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.file_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.comments_dock)
 
         # Actions
         action = functools.partial(utils.newAction, self)
@@ -277,7 +306,6 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr('Start drawing polygons'),
             enabled=False,
         )
-
 
         createRectangleMode = action(
             self.tr('Create Rectangle'),
@@ -572,6 +600,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.label_dock.toggleViewAction(),
                 self.shape_dock.toggleViewAction(),
                 self.file_dock.toggleViewAction(),
+                self.comments_dock.toggleViewAction(),
                 None,
                 fill_drawing,
                 None,
@@ -1163,6 +1192,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if selected_shapes:
                 self.canvas.selectShapes(selected_shapes)
 
+    def comboBoxCommentsCurrentIndexChanged(self, index: int):
+        print(self.COMMENTS_STATUS[index])
+        self.setDirty()
+
     def labelItemChanged(self, item):
         shape = self.labelList.get_shape_from_item(item)
         label = str(item.text())
@@ -1319,6 +1352,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 )
                 self.status(self.tr("Error reading %s") % label_file)
                 return False
+
             self.imageData = self.labelFile.imageData
             self.imagePath = osp.join(
                 osp.dirname(label_file),
@@ -1329,6 +1363,18 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.labelFile.fillColor is not None:
                 self.fillColor = QtGui.QColor(*self.labelFile.fillColor)
             self.otherData = self.labelFile.otherData
+
+            self.comments_dock.setDisabled(False)
+            self.textComments.setText(self.labelFile.comments)
+
+            self.comboBoxCommentsWidget.setCurrentText(self.COMMENTS_STATUS[0])
+            self.comboBoxCommentsWidget.setCurrentText(self.labelFile.status)
+
+            # item = self.imageList.index(filename)
+            # item.setIcon(QIcon(os.getcwd() + "/icons/" + self.labelFile.status + ".png"))
+
+            # self.imageList.index.setIcon(QIcon(os.getcwd() + "/icons/Complete.png"))
+
         else:
             self.imageData = LabelFile.load_image_file(filename)
             if self.imageData:
@@ -1799,6 +1845,22 @@ class MainWindow(QtWidgets.QMainWindow):
                 label_file = osp.join(self.output_dir, label_file_without_path)
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+           # y = self.labelFile.status
+            #print(y)
+
+            # item.setIcon(QIcon(os.getcwd() + "/icons/" + self.labelFile.status + ".png"))
+
+            # for icl in self.COMMENTS_STATUS:
+            #    item.setIcon(QIcon(os.getcwd() + "/icons/" + icl + ".png"))
+
+            # if self.labelFile.status == 'Incomplete':
+            #    item.setIcon(QIcon(os.getcwd() + "/icons/Incomplete.png"))
+            # if self.labelFile.status == 'Complete':
+            #    item.setIcon(QIcon(os.getcwd() + "/icons/Complete.png"))
+            # if self.labelFile.status == 'In Process':
+            #    item.setIcon(QIcon(os.getcwd() + "/icons/In Process.png"))
+
             if QtCore.QFile.exists(label_file) and \
                     LabelFile.is_label_file(label_file):
                 item.setCheckState(Qt.Checked)

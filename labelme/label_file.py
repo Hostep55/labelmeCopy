@@ -27,6 +27,8 @@ class LabelFile(object):
         self.shapes = []
         self.imagePath = None
         self.imageData = None
+        self.comments = None
+        self.status = None
         if filename is not None:
             self.load(filename)
         self.filename = filename
@@ -68,6 +70,7 @@ class LabelFile(object):
         try:
             with open(filename, 'rb' if PY2 else 'r') as f:
                 data = json.load(f)
+
             if data['imageData'] is not None:
                 imageData = base64.b64decode(data['imageData'])
                 if PY2 and QT4:
@@ -85,6 +88,14 @@ class LabelFile(object):
             )
             lineColor = data['lineColor']
             fillColor = data['fillColor']
+
+            comments = None
+            if "comments" in data:
+               comments = data["comments"]
+            status = None
+            if "status" in data:
+               status = data["status"]
+
             shapes = [
                 dict(
                     label=s['label'],
@@ -113,6 +124,8 @@ class LabelFile(object):
         self.fillColor = fillColor
         self.filename = filename
         self.otherData = otherData
+        self.comments = comments
+        self.status = status
 
     @staticmethod
     def _check_image_height_and_width(imageData, imageHeight, imageWidth):
