@@ -1,4 +1,5 @@
 import functools
+import json
 import os
 import os.path as osp
 import re
@@ -45,7 +46,7 @@ from .widgets.canvas import CURSOR_DRAW
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
     COMMENTS_STATUS = [
-        '-- Select --',
+        '-- Undefined status --',
         'Incomplete',
         'In Process',
         'Complete'
@@ -1117,7 +1118,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.flag_widget.addItem(item)
 
     def saveLabels(self, filename):
-        lf = LabelFile()
+        lf = LabelFile()  # load old information to be replaced
 
         def format_shape(s):
             return dict(
@@ -1138,6 +1139,15 @@ class MainWindow(QtWidgets.QMainWindow):
             key = item.text()
             flag = item.checkState() == Qt.Checked
             flags[key] = flag
+
+        comments = None
+        status = None
+        try:
+            comments = str(self.textComments.toPlainText())
+            status = str(self.comboBoxCommentsWidget.currentText())
+        except:
+            pass
+
         try:
             imagePath = osp.relpath(
                 self.imagePath, osp.dirname(filename))
@@ -1155,6 +1165,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 fillColor=self.fillColor.getRgb(),
                 otherData=self.otherData,
                 flags=flags,
+                comments=comments,
+                status=status
             )
             self.labelFile = lf
             items = self.fileListWidget.findItems(
@@ -1193,8 +1205,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.canvas.selectShapes(selected_shapes)
 
     def comboBoxCommentsCurrentIndexChanged(self, index: int):
-        print(self.COMMENTS_STATUS[index])
+        item = self.fileListWidget.currentItem();
+        MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[index])
         self.setDirty()
+
+    def setStatusIcon(item, status: str):
+        item.setIcon(QIcon(os.getcwd() + "/icons/" + status + ".png"))
 
     def labelItemChanged(self, item):
         shape = self.labelList.get_shape_from_item(item)
@@ -1332,6 +1348,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tr('No such file: <b>%s</b>') % filename
             )
             return False
+        self.comments_dock.setDisabled(False)
+        self.comboBoxCommentsWidget.setCurrentText(self.COMMENTS_STATUS[0])
         # assumes same name, but json extension
         self.status(self.tr("Loading %s...") % osp.basename(str(filename)))
         label_file = osp.splitext(filename)[0] + '.json'
@@ -1364,17 +1382,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.fillColor = QtGui.QColor(*self.labelFile.fillColor)
             self.otherData = self.labelFile.otherData
 
-            self.comments_dock.setDisabled(False)
+
             self.textComments.setText(self.labelFile.comments)
 
-            self.comboBoxCommentsWidget.setCurrentText(self.COMMENTS_STATUS[0])
+            
             self.comboBoxCommentsWidget.setCurrentText(self.labelFile.status)
-
-            # item = self.imageList.index(filename)
-            # item.setIcon(QIcon(os.getcwd() + "/icons/" + self.labelFile.status + ".png"))
-
-            # self.imageList.index.setIcon(QIcon(os.getcwd() + "/icons/Complete.png"))
-
         else:
             self.imageData = LabelFile.load_image_file(filename)
             if self.imageData:
@@ -1846,24 +1858,19 @@ class MainWindow(QtWidgets.QMainWindow):
             item = QtWidgets.QListWidgetItem(filename)
             item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
 
-           # y = self.labelFile.status
-            #print(y)
-
-            # item.setIcon(QIcon(os.getcwd() + "/icons/" + self.labelFile.status + ".png"))
-
-            # for icl in self.COMMENTS_STATUS:
-            #    item.setIcon(QIcon(os.getcwd() + "/icons/" + icl + ".png"))
-
-            # if self.labelFile.status == 'Incomplete':
-            #    item.setIcon(QIcon(os.getcwd() + "/icons/Incomplete.png"))
-            # if self.labelFile.status == 'Complete':
-            #    item.setIcon(QIcon(os.getcwd() + "/icons/Complete.png"))
-            # if self.labelFile.status == 'In Process':
-            #    item.setIcon(QIcon(os.getcwd() + "/icons/In Process.png"))
-
             if QtCore.QFile.exists(label_file) and \
                     LabelFile.is_label_file(label_file):
                 item.setCheckState(Qt.Checked)
+
+                # open the file to read the status
+                with open(label_file, 'r') as f:
+                    data = json.load(f)
+                    if "status" in data:
+                        status = data["status"]
+                    else:
+                        status = self.COMMENTS_STATUS[0];
+
+                MainWindow.setStatusIcon(item, status)
             else:
                 item.setCheckState(Qt.Unchecked)
             self.fileListWidget.addItem(item)

@@ -11,7 +11,6 @@ from labelme import PY2
 from labelme import QT4
 from labelme import utils
 
-
 PIL.Image.MAX_IMAGE_PIXELS = None
 
 
@@ -20,7 +19,6 @@ class LabelFileError(Exception):
 
 
 class LabelFile(object):
-
     suffix = '.json'
 
     def __init__(self, filename=None):
@@ -63,9 +61,11 @@ class LabelFile(object):
             'lineColor',
             'fillColor',
             'shapes',  # polygonal annotations
-            'flags',   # image level flags
+            'flags',  # image level flags
             'imageHeight',
             'imageWidth',
+            'comments',
+            'status'
         ]
         try:
             with open(filename, 'rb' if PY2 else 'r') as f:
@@ -91,10 +91,10 @@ class LabelFile(object):
 
             comments = None
             if "comments" in data:
-               comments = data["comments"]
+                comments = data["comments"]
             status = None
             if "status" in data:
-               status = data["status"]
+                status = data["status"]
 
             shapes = [
                 dict(
@@ -145,17 +145,19 @@ class LabelFile(object):
         return imageHeight, imageWidth
 
     def save(
-        self,
-        filename,
-        shapes,
-        imagePath,
-        imageHeight,
-        imageWidth,
-        imageData=None,
-        lineColor=None,
-        fillColor=None,
-        otherData=None,
-        flags=None,
+            self,
+            filename,
+            shapes,
+            imagePath,
+            imageHeight,
+            imageWidth,
+            imageData=None,
+            lineColor=None,
+            fillColor=None,
+            otherData=None,
+            flags=None,
+            comments=None,
+            status=None,
     ):
         if imageData is not None:
             imageData = base64.b64encode(imageData).decode('utf-8')
@@ -176,6 +178,8 @@ class LabelFile(object):
             imageData=imageData,
             imageHeight=imageHeight,
             imageWidth=imageWidth,
+            comments=comments,
+            status=status,
         )
         for key, value in otherData.items():
             data[key] = value
