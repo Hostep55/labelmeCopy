@@ -113,7 +113,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.comboBoxCommentsWidget.addItem(QIcon(os.getcwd() + "/icons/" + op + ".png"), op)
 
         self.comboBoxCommentsWidget.currentIndexChanged.connect(self.comboBoxCommentsCurrentIndexChanged)
-        fileListLayout = QtWidgets.QVBoxLayout()  # TODO esta seccion porq se dejo fileListLayout y porq no interfiere con el original q esta abajo?
+        fileListLayout = QtWidgets.QVBoxLayout()
         fileListLayout.setContentsMargins(0, 0, 0, 0)
         fileListLayout.setSpacing(0)
         fileListLayout.addWidget(self.textComments)
@@ -828,6 +828,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.labelFile = None
         self.otherData = None
         self.canvas.resetState()
+        self.textComments.clear()
+        self.comboBoxCommentsWidget.setCurrentIndex(0)
+
 
     def currentItem(self):
         items = self.labelList.selectedItems()
@@ -1206,8 +1209,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def comboBoxCommentsCurrentIndexChanged(self, index: int):
         item = self.fileListWidget.currentItem();
-        MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[index])
-        self.setDirty()
+        if item:
+            MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[index])
+            self.setDirty()
 
     def setStatusIcon(item, status: str):
         item.setIcon(QIcon(os.getcwd() + "/icons/" + status + ".png"))
@@ -1388,6 +1392,7 @@ class MainWindow(QtWidgets.QMainWindow):
             
             self.comboBoxCommentsWidget.setCurrentText(self.labelFile.status)
         else:
+            self.comboBoxCommentsWidget.setCurrentIndex(0)
             self.imageData = LabelFile.load_image_file(filename)
             if self.imageData:
                 self.imagePath = filename
@@ -1604,7 +1609,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        if self._config['flags'] or self.hasLabels():
+        if self._config['flags'] or True:
             if self.labelFile:
                 # DL20180323 - overwrite when in directory
                 self._saveFile(self.labelFile.filename)
@@ -1868,11 +1873,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     if "status" in data:
                         status = data["status"]
                     else:
-                        status = self.COMMENTS_STATUS[0];
+                        status = self.COMMENTS_STATUS[0]
 
                 MainWindow.setStatusIcon(item, status)
             else:
                 item.setCheckState(Qt.Unchecked)
+                MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[0])
             self.fileListWidget.addItem(item)
         self.openNextImg(load=load)
 
