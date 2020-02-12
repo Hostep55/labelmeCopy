@@ -1,3 +1,4 @@
+import os
 import re
 
 from qtpy import QT_VERSION
@@ -79,6 +80,9 @@ class LabelDialog(QtWidgets.QDialog):
         self.labelList.itemDoubleClicked.connect(self.labelDoubleClicked)
         self.edit.setListWidget(self.labelList)
         layout.addWidget(self.labelList)
+
+        self.addLabelsFromFile(self.labelList)
+
         # label_flags
         if flags is None:
             flags = {}
@@ -107,6 +111,15 @@ class LabelDialog(QtWidgets.QDialog):
             raise ValueError('Unsupported completion: {}'.format(completion))
         completer.setModel(self.labelList.model())
         self.edit.setCompleter(completer)
+
+    @staticmethod
+    def addLabelsFromFile(qlist: QtWidgets.QListWidget):
+        predefinedlabels = os.path.join(os.getcwd() + "/predefinedlabels.txt")
+        with open(predefinedlabels, 'r') as f:
+            content = f.readlines()
+            content = [x.strip() for x in content]
+            for i in content:
+                qlist.addItem(i)
 
     def addLabelHistory(self, label):
         if self.labelList.findItems(label, QtCore.Qt.MatchExactly):

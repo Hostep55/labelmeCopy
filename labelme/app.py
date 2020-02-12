@@ -45,12 +45,8 @@ from .widgets.canvas import CURSOR_DRAW
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
-    COMMENTS_STATUS = [
-        '-- Undefined status --',
-        'Incomplete',
-        'In Process',
-        'Complete'
-    ]
+    comments_status = []
+    image_selected_status = []
 
     def __init__(
             self,
@@ -109,8 +105,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.textComments.textChanged.connect(self.setDirty)
         self.comboBoxCommentsWidget = QtWidgets.QComboBox()
 
-        for op in self.COMMENTS_STATUS:
-            self.comboBoxCommentsWidget.addItem(QIcon(os.getcwd() + "/icons/" + op + ".png"), op)
+        # open the file with predefined Status to read the Status list
+        predefinedStatus = os.path.join(os.getcwd() + "/predefinedStatus.txt")
+        with open(predefinedStatus, 'r') as k:
+            content = k.readlines()
+            content = [x.strip() for x in content]
+            for i in content:
+                splited = i.split("#")
+                iconText = splited[0]
+                statusText = splited[1]
+                self.comboBoxCommentsWidget.addItem(QIcon(os.getcwd() + "/icons/" + iconText + ".png"), statusText)
+                self.image_selected_status.append(iconText)
+                self.comments_status.append(statusText)
 
         self.comboBoxCommentsWidget.currentIndexChanged.connect(self.comboBoxCommentsCurrentIndexChanged)
         fileListLayout = QtWidgets.QVBoxLayout()
@@ -141,6 +147,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.shape_dock.setWidget(self.labelList)
 
         self.uniqLabelList = EscapableQListWidget()
+
         self.uniqLabelList.setToolTip(self.tr(
             "Select label to start annotating for it. "
             "Press 'Esc' to deselect."))
@@ -150,6 +157,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.label_dock = QtWidgets.QDockWidget(self.tr(u'Label List'), self)
         self.label_dock.setObjectName(u'Label List')
         self.label_dock.setWidget(self.uniqLabelList)
+
+        LabelDialog.addLabelsFromFile(self.uniqLabelList)
 
         self.fileSearch = QtWidgets.QLineEdit()
         self.fileSearch.setPlaceholderText(self.tr('Search Filename'))
@@ -1019,10 +1028,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def fileSelectionChanged(self):
-        items = self.fileListWidget.selectedItems()
-        if not items:
-            return
-        item = items[0]
+        item = self.fileListWidget.currentItem()
 
         if not self.mayContinue():
             return
@@ -1210,9 +1216,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def comboBoxCommentsCurrentIndexChanged(self, index: int):
         item = self.fileListWidget.currentItem();
         if item:
-            MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[index])
+            MainWindow.setStatusIcon(item, self.image_selected_status[index])
             self.setDirty()
 
+    @staticmethod
     def setStatusIcon(item, status: str):
         item.setIcon(QIcon(os.getcwd() + "/icons/" + status + ".png"))
 
@@ -1353,13 +1360,14 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             return False
         self.comments_dock.setDisabled(False)
-        self.comboBoxCommentsWidget.setCurrentText(self.COMMENTS_STATUS[0])
+        self.comboBoxCommentsWidget.setCurrentText(self.comments_status[0])
         # assumes same name, but json extension
         self.status(self.tr("Loading %s...") % osp.basename(str(filename)))
         label_file = osp.splitext(filename)[0] + '.json'
         if self.output_dir:
             label_file_without_path = osp.basename(label_file)
             label_file = osp.join(self.output_dir, label_file_without_path)
+
         if QtCore.QFile.exists(label_file) and \
                 LabelFile.is_label_file(label_file):
             try:
@@ -1386,10 +1394,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.fillColor = QtGui.QColor(*self.labelFile.fillColor)
             self.otherData = self.labelFile.otherData
 
-
             self.textComments.setText(self.labelFile.comments)
-
-            
             self.comboBoxCommentsWidget.setCurrentText(self.labelFile.status)
         else:
             self.comboBoxCommentsWidget.setCurrentIndex(0)
@@ -1397,6 +1402,10 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.imageData:
                 self.imagePath = filename
             self.labelFile = None
+
+        #execute the combobox change because if the item dosent change, it dosent call the method
+        self.comboBoxCommentsCurrentIndexChanged(self.comboBoxCommentsWidget.currentIndex())
+
         image = QtGui.QImage.fromData(self.imageData)
 
         if image.isNull():
@@ -1609,7 +1618,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def saveFile(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        if self._config['flags'] or True:
+        if self._config['flags'] or self.dirty or self.hasLabels():
             if self.labelFile:
                 # DL20180323 - overwrite when in directory
                 self._saveFile(self.labelFile.filename)
@@ -1844,6 +1853,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return lst
 
     def importDirImages(self, dirpath, pattern=None, load=True):
+
+
         self.actions.openNextImg.setEnabled(True)
         self.actions.openPrevImg.setEnabled(True)
 
@@ -1871,14 +1882,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 with open(label_file, 'r') as f:
                     data = json.load(f)
                     if "status" in data:
-                        status = data["status"]
+                        sta = data["status"]
+                        if sta in self.comments_status:
+                            postat = self.comments_status.index(sta)
+                            statusImageIcon = self.image_selected_status[postat]
+                        else: #status is not in the list of predefined status
+                            statusImageIcon = self.image_selected_status[0]
                     else:
-                        status = self.COMMENTS_STATUS[0]
-
-                MainWindow.setStatusIcon(item, status)
+                        statusImageIcon = self.image_selected_status[0]
+                MainWindow.setStatusIcon(item, statusImageIcon)
             else:
                 item.setCheckState(Qt.Unchecked)
-                MainWindow.setStatusIcon(item, self.COMMENTS_STATUS[0])
+                MainWindow.setStatusIcon(item, self.image_selected_status[0])
             self.fileListWidget.addItem(item)
         self.openNextImg(load=load)
 
