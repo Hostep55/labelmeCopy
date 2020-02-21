@@ -21,15 +21,24 @@ class LabelQLineEdit(QtWidgets.QLineEdit):
     def setListWidget(self, list_widget):
         self.list_widget = list_widget
 
+    def setParentLD(self, LDParent):
+        self.LDParent = LDParent
+
     def keyPressEvent(self, e):
         if e.key() in [QtCore.Qt.Key_Up, QtCore.Qt.Key_Down]:
             self.list_widget.keyPressEvent(e)
         else:
-            super(LabelQLineEdit, self).keyPressEvent(e)
-
+            for i in range (self.list_widget.count()):
+                item = self.list_widget.item(i)
+                labelitem = item.text()
+                if labelitem.startswith("(" + e.text()):
+                    self.list_widget.setCurrentItem(item)
+                    self.LDParent.validate()
+                    return
+            else:
+                super(LabelQLineEdit, self).keyPressEvent(e)
 
 class LabelDialog(QtWidgets.QDialog):
-
     def __init__(self, text="Enter object label", parent=None, labels=None,
                  sort_labels=True, show_text_field=True,
                  completion='startswith', fit_to_content=None, flags=None):
@@ -79,9 +88,13 @@ class LabelDialog(QtWidgets.QDialog):
         self.labelList.currentItemChanged.connect(self.labelSelected)
         self.labelList.itemDoubleClicked.connect(self.labelDoubleClicked)
         self.edit.setListWidget(self.labelList)
+        self.edit.setParentLD(self)
         layout.addWidget(self.labelList)
 
-        self.addLabelsFromFile(self.labelList)
+        self.addLabelsFromFile(self.labelList, True)
+
+
+
 
         # label_flags
         if flags is None:
@@ -113,26 +126,40 @@ class LabelDialog(QtWidgets.QDialog):
         self.edit.setCompleter(completer)
 
     @staticmethod
-    def addLabelsFromFile(qlist: QtWidgets.QListWidget):
+    def addLabelsFromFile(qlist: QtWidgets.QListWidget, showShortcut: bool):
+        predefinedLabelList = []
+        labelShortCutList = []
         predefinedlabels = os.path.join(os.getcwd() + "/predefinedlabels.txt")
         with open(predefinedlabels, 'r') as f:
             content = f.readlines()
             content = [x.strip() for x in content]
             for i in content:
-                qlist.addItem(i)
+                splited = i.split("#")
+                predefinedLabel = splited[1]
+                labelShortCut = splited[0]
+                predefinedLabelList.append(predefinedLabel)
+                labelShortCutList.append(labelShortCut)
+                if showShortcut is True:
+                    qlist.addItem("(" + labelShortCut + ") " + predefinedLabel)
+                else:
+                    qlist.addItem(predefinedLabel)
+
 
     def addLabelHistory(self, label):
-        if self.labelList.findItems(label, QtCore.Qt.MatchExactly):
+        nlabel = ") " + label
+        if self.labelList.findItems(label, QtCore.Qt.MatchExactly) or self.labelList.findItems(nlabel, QtCore.Qt.MatchEndsWith):
+
             return
         self.labelList.addItem(label)
         if self._sort_labels:
             self.labelList.sortItems()
 
     def labelSelected(self, item):
-        self.edit.setText(item.text())
+        self.edit.setText(item.text()[4:])
 
     def validate(self):
         text = self.edit.text()
+
         if hasattr(text, 'strip'):
             text = text.strip()
         else:
@@ -145,6 +172,7 @@ class LabelDialog(QtWidgets.QDialog):
 
     def postProcess(self):
         text = self.edit.text()
+
         if hasattr(text, 'strip'):
             text = text.strip()
         else:

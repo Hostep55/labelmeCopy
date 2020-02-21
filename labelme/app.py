@@ -48,6 +48,7 @@ class MainWindow(QtWidgets.QMainWindow):
     comments_status = []
     image_selected_status = []
 
+
     def __init__(
             self,
             config=None,
@@ -158,7 +159,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.label_dock.setObjectName(u'Label List')
         self.label_dock.setWidget(self.uniqLabelList)
 
-        LabelDialog.addLabelsFromFile(self.uniqLabelList)
+
+        LabelDialog.addLabelsFromFile(self.uniqLabelList, False)
+
 
         self.fileSearch = QtWidgets.QLineEdit()
         self.fileSearch.setPlaceholderText(self.tr('Search Filename'))
@@ -1020,6 +1023,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.uniqLabelList.addItem(text)
             self.uniqLabelList.sortItems()
 
+
     def fileSearchChanged(self):
         self.importDirImages(
             self.lastOpenDir,
@@ -1403,7 +1407,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.imagePath = filename
             self.labelFile = None
 
-        #execute the combobox change because if the item dosent change, it dosent call the method
+        #execute the combobox change because if the item does not change, it does not call the method
         self.comboBoxCommentsCurrentIndexChanged(self.comboBoxCommentsWidget.currentIndex())
 
         image = QtGui.QImage.fromData(self.imageData)
@@ -1851,6 +1855,7 @@ class MainWindow(QtWidgets.QMainWindow):
             item = self.fileListWidget.item(i)
             lst.append(item.text())
         return lst
+
 
     def importDirImages(self, dirpath, pattern=None, load=True):
 
