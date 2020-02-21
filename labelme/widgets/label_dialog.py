@@ -155,7 +155,10 @@ class LabelDialog(QtWidgets.QDialog):
             self.labelList.sortItems()
 
     def labelSelected(self, item):
-        self.edit.setText(item.text()[4:])
+        if item.text().startswith("("):
+            self.edit.setText(item.text()[4:])
+        else:
+            self.edit.setText(item.text())
 
     def validate(self):
         text = self.edit.text()
